@@ -3,22 +3,49 @@ enum Cell {
     Empty, Wall, Goal
 }
 
+struct Entity {
+    pos: (usize, usize),
+}
+
 const SIZE: usize = 10;
 
 fn main() {
-    let mut map = [[Cell::Empty; SIZE]; SIZE];
-    map[1][2] = Cell::Wall;
-    render(&map);
+    let mut map = generate();
+    
+    let mut entity = Entity{pos: (0, 0)};
+    
+    render(&map, &entity);
 }
 
-fn render(map: &[[Cell; SIZE]; SIZE]) {
+fn generate() -> [[Cell; SIZE]; SIZE] {
+    let mut map = [[Cell::Empty; SIZE]; SIZE];
+    
+    for i in 2..9 {
+        map[3][i] = Cell::Wall;
+    }
+
+    for i in 0..6 {
+        map[7][i] = Cell::Wall;
+    }
+
+    map[9][2] = Cell::Goal;
+
+    map
+}
+
+fn render(map: &[[Cell; SIZE]; SIZE], entity: &Entity) {
     println!("Map:");
-    for row in map {
-        for cell in row {
+    for (y, row) in map.iter().enumerate() {
+        for (x, cell) in row.iter().enumerate() {
+            if x == entity.pos.0 && y == entity.pos.1 {
+                print!("E");
+                continue;
+            }
+            
             print!("{}", match cell {
                 Cell::Empty => " ",
                 Cell::Wall => "#",
-                Cell::Goal => "!",
+                Cell::Goal => "G",
             });
         }
         println!();
