@@ -1,3 +1,6 @@
+mod nn;
+use nn::Value;
+
 #[derive(Copy, Clone)]
 enum Cell {
     Empty, Wall, Goal
@@ -10,6 +13,12 @@ struct Entity {
 const SIZE: usize = 10;
 
 fn main() {
+    let a = Value::new(2.0, "A", None);
+    let b = Value::new(5.0, "B", None);
+    let c = a.add(b);
+    println!("{}", c.data);
+    return;
+    
     let mut map = generate();
     
     let mut entity = Entity{pos: (0, 0)};
