@@ -1,9 +1,12 @@
 mod nn;
-use nn::Value;
+
+use crate::nn::{ValueAccessor, ValueTree};
 
 #[derive(Copy, Clone)]
 enum Cell {
-    Empty, Wall, Goal
+    Empty,
+    Wall,
+    Goal,
 }
 
 struct Entity {
@@ -13,22 +16,36 @@ struct Entity {
 const SIZE: usize = 10;
 
 fn main() {
-    let a = Value::new(2.0, "A", None);
-    let b = Value::new(5.0, "B", None);
-    let c = a.add(b);
-    println!("{}", c.data);
-    return;
-    
-    let mut map = generate();
-    
-    let mut entity = Entity{pos: (0, 0)};
-    
+    let mut vt = ValueTree::new();
+
+    let x1 = vt.create_value(2.0, "x1", None).id();
+    let x2 = vt.create_value(0.0, "x2", None).id();
+
+    let w1 = vt.create_value(-3.0, "w1", None).id();
+    let w2 = vt.create_value(1.0, "w2", None).id();
+
+    let b = vt.create_value(6.8813735870195432, "b", None).id();
+
+    let x1w1 = vt.mul_values(x1, w1, "x1w2").id();
+    let x2w2 = vt.mul_values(x2, w2, "x2w2").id();
+
+    let x1w1x2w2 = vt.add_values(x1w1, x2w2, "x1w1x2w2").id();
+
+    let n = vt.add_values(x1w1x2w2, b, "n").id();
+    let o = vt.tanh_value(n, "o").id();
+
+    vt.backward(o);
+    println!("{:?}", vt.get(x1));
+
+    let map = generate();
+    let entity = Entity { pos: (0, 0) };
+
     render(&map, &entity);
 }
 
 fn generate() -> [[Cell; SIZE]; SIZE] {
     let mut map = [[Cell::Empty; SIZE]; SIZE];
-    
+
     for i in 2..9 {
         map[3][i] = Cell::Wall;
     }
@@ -50,12 +67,15 @@ fn render(map: &[[Cell; SIZE]; SIZE], entity: &Entity) {
                 print!("E");
                 continue;
             }
-            
-            print!("{}", match cell {
-                Cell::Empty => " ",
-                Cell::Wall => "#",
-                Cell::Goal => "G",
-            });
+
+            print!(
+                "{}",
+                match cell {
+                    Cell::Empty => " ",
+                    Cell::Wall => "#",
+                    Cell::Goal => "G",
+                }
+            );
         }
         println!();
     }
