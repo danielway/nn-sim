@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 use std::fmt::Debug;
 
+use rand::{thread_rng, Rng};
+
 type ValueId = usize;
 
 pub trait ValueAccessor {
@@ -210,5 +212,90 @@ impl Debug for Value {
             .field("data", &self.data)
             .field("grad", &self.grad)
             .finish()
+    }
+}
+
+pub struct Neuron {
+    weights: Vec<ValueId>,
+    bias: ValueId,
+}
+
+impl Neuron {
+    pub fn new(vt: &mut ValueTree, input_count: usize) -> Neuron {
+        let mut rng = thread_rng();
+        Neuron {
+            weights: (0..input_count)
+                .map(|_| vt.create_value(rng.gen_range(-1.0..1.0), "", None).id())
+                .collect(),
+            bias: vt.create_value(rng.gen_range(-1.0..1.0), "b", None).id(),
+        }
+    }
+
+    pub fn forward(&self, vt: &mut ValueTree, xs: &Vec<ValueId>) -> ValueId {
+        let mut products = Vec::new();
+        for (w, x) in std::iter::zip(&self.weights, xs) {
+            products.push(vt.mul_values(*w, *x, "").id());
+        }
+
+        let mut sum = self.bias;
+        for p in &products {
+            sum = vt.add_values(sum, *p, "").id();
+        }
+
+        vt.tanh_value(sum, "").id()
+    }
+
+    pub fn parameters(&self) -> Vec<ValueId> {
+        let mut params = self.weights.clone();
+        params.push(self.bias);
+        params
+    }
+}
+
+pub struct Layer {
+    neurons: Vec<Neuron>,
+}
+
+impl Layer {
+    pub fn new(vt: &mut ValueTree, input_count: usize, output_count: usize) -> Layer {
+        Layer {
+            neurons: (0..output_count)
+                .map(|_| Neuron::new(vt, input_count))
+                .collect(),
+        }
+    }
+
+    pub fn forward(&self, vt: &mut ValueTree, xs: &Vec<ValueId>) -> Vec<ValueId> {
+        self.neurons.iter().map(|n| n.forward(vt, xs)).collect()
+    }
+
+    pub fn parameters(&self) -> Vec<ValueId> {
+        self.neurons.iter().flat_map(|n| n.parameters()).collect()
+    }
+}
+
+pub struct MLP {
+    layers: Vec<Layer>,
+}
+
+impl MLP {
+    pub fn new(vt: &mut ValueTree, input_count: usize, output_counts: Vec<usize>) -> MLP {
+        let layer_sizes: Vec<usize> = [input_count].into_iter().chain(output_counts).collect();
+        MLP {
+            layers: (0..output_counts.len())
+                .map(|i| Layer::new(vt, layer_sizes[i], layer_sizes[i + 1]))
+                .collect(),
+        }
+    }
+
+    pub fn forward(&self, vt: &mut ValueTree, mut xs: Vec<ValueId>) -> Vec<ValueId> {
+        for layer in self.layers {
+            xs = layer.forward(vt, &xs);
+        }
+        xs
+    }
+
+    pub fn parameters(&self) -> Vec<ValueId> {
+        self.layers.iter().flat_map(|l| l.parameters()).collect()
     }
 }
