@@ -1,6 +1,6 @@
 mod nn;
 
-use crate::nn::{ValueAccessor, ValueTree};
+use crate::nn::{Neuron, ValueAccessor, ValueTree, MLP};
 
 #[derive(Copy, Clone)]
 enum Cell {
@@ -36,6 +36,22 @@ fn main() {
 
     vt.backward(o);
     println!("{:?}", vt.get(x1));
+
+    let mlp = MLP::new(vt, 3, vec![4, 4, 1]);
+
+    let xs = vec![
+        vec![2.0, 3.0, -1.0],
+        vec![3.0, -1.0, 0.5],
+        vec![0.5, 1.0, 1.0],
+        vec![1.0, 1.0, -1.0],
+    ];
+
+    let ys = vec![1.0, -1.0, -1.0, 1.0];
+
+    for _ in 0..1000 {
+        // TODO: map f64 to values, complete training loop
+        let ypred: Vec<Vec<ValueId>> = xs.iter().map(|x| mlp.forward(&mut vt, x)).collect();
+    }
 
     let map = generate();
     let entity = Entity { pos: (0, 0) };
