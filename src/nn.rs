@@ -3,6 +3,11 @@ use std::fmt::Debug;
 
 type ValueId = usize;
 
+pub trait ValueAccessor {
+    fn get(&self, id: ValueId) -> &Value;
+    fn get_mut(&mut self, id: ValueId) -> &mut Value;
+}
+
 pub struct ValueTree {
     values: Vec<Value>,
 }
@@ -18,32 +23,34 @@ impl ValueTree {
         &self.values[self.values.len() - 1]
     }
 
-    pub fn add_values(&mut self, first_id: usize, second_id: usize, label: &str) -> &Value {
+    pub fn add_values(&mut self, first_id: ValueId, second_id: ValueId, label: &str) -> &Value {
         let first = &self.values[first_id];
         let second = &self.values[second_id];
 
         self.values
             .push(first.add(second, self.values.len(), label));
+
         &self.values[self.values.len() - 1]
     }
 
-    pub fn mul_values(&mut self, first_id: usize, second_id: usize, label: &str) -> &Value {
+    pub fn mul_values(&mut self, first_id: ValueId, second_id: ValueId, label: &str) -> &Value {
         let first = &self.values[first_id];
         let second = &self.values[second_id];
 
         self.values
             .push(first.mul(second, self.values.len(), label));
+
         &self.values[self.values.len() - 1]
     }
 
-    pub fn tanh_value(&mut self, id: usize, label: &str) -> &Value {
+    pub fn tanh_value(&mut self, id: ValueId, label: &str) -> &Value {
         let value = &self.values[id];
 
         self.values.push(value.tanh(self.values.len(), label));
         &self.values[self.values.len() - 1]
     }
 
-    pub fn backward(&mut self, id: usize) {
+    pub fn backward(&mut self, id: ValueId) {
         let mut topo: Vec<usize> = Vec::new();
         let mut visited: HashSet<usize> = HashSet::new();
 
@@ -59,7 +66,7 @@ impl ValueTree {
         }
     }
 
-    fn build_topo(&self, topo: &mut Vec<usize>, visited: &mut HashSet<usize>, id: usize) {
+    fn build_topo(&self, topo: &mut Vec<usize>, visited: &mut HashSet<usize>, id: ValueId) {
         if !visited.contains(&id) {
             visited.insert(id);
             let value = &self.values[id];
@@ -71,17 +78,12 @@ impl ValueTree {
     }
 }
 
-pub trait ValueAccessor {
-    fn get(&self, id: usize) -> &Value;
-    fn get_mut(&mut self, id: usize) -> &mut Value;
-}
-
 impl ValueAccessor for ValueTree {
-    fn get(&self, id: usize) -> &Value {
+    fn get(&self, id: ValueId) -> &Value {
         &self.values[id]
     }
 
-    fn get_mut(&mut self, id: usize) -> &mut Value {
+    fn get_mut(&mut self, id: ValueId) -> &mut Value {
         &mut self.values[id]
     }
 }
@@ -133,68 +135,69 @@ impl Value {
     }
 
     fn add(&self, other: &Value, new_id: ValueId, label: &str) -> Value {
+        let propagate_fn = |id, accessor: &mut dyn ValueAccessor| {
+            let value = accessor.get(id);
+            let grad = value.grad;
+
+            let a_id = value.prev[0];
+            let b_id = value.prev[1];
+
+            accessor.get_mut(a_id).grad += grad;
+            accessor.get_mut(b_id).grad += grad;
+        };
+
         Value::new_back(
             new_id,
             self.data + other.data,
             label,
             "+",
             Some(vec![self.id, other.id]),
-            |id, accessor| {
-                let value = accessor.get(id);
-                let a_id = value.prev[0];
-                let b_id = value.prev[1];
-                let grad = value.grad;
-
-                let a = accessor.get_mut(a_id);
-                a.grad += 1.0 * grad;
-
-                let b = accessor.get_mut(b_id);
-                b.grad += 1.0 * grad;
-            },
+            propagate_fn,
         )
     }
 
     fn mul(&self, other: &Value, new_id: ValueId, label: &str) -> Value {
+        let propagate_fn = |id, accessor: &mut dyn ValueAccessor| {
+            let value = accessor.get(id);
+            let grad = value.grad;
+
+            let a_id = value.prev[0];
+            let b_id = value.prev[1];
+
+            let a_data = accessor.get(a_id).data;
+            let b_data = accessor.get(b_id).data;
+
+            accessor.get_mut(a_id).grad += b_data * grad;
+            accessor.get_mut(b_id).grad += a_data * grad;
+        };
+
         Value::new_back(
             new_id,
             self.data * other.data,
             label,
             "*",
             Some(vec![self.id, other.id]),
-            |id, accessor| {
-                let value = accessor.get(id);
-                let a_id = value.prev[0];
-                let b_id = value.prev[1];
-                let grad = value.grad;
-
-                let a_data = accessor.get(a_id).data;
-                let b_data = accessor.get(b_id).data;
-
-                let a = accessor.get_mut(a_id);
-                a.grad += b_data * grad;
-
-                let b = accessor.get_mut(b_id);
-                b.grad += a_data * grad;
-            },
+            propagate_fn,
         )
     }
 
     fn tanh(&self, new_id: ValueId, label: &str) -> Value {
+        let propagate_fn = |id, accessor: &mut dyn ValueAccessor| {
+            let value = accessor.get(id);
+            let t = value.data;
+            let grad = value.grad;
+
+            let prev = accessor.get_mut(value.prev[0]);
+            prev.grad += (1.0 - t.powf(2.0)) * grad;
+        };
+
         Value::new_back(
             new_id,
             self.data.tanh(),
             label,
             "tanh",
             Some(vec![self.id]),
-            |id, accessor| {
-                let value = accessor.get(id);
-                let t = value.data;
-                let grad = value.grad;
-
-                let prev = accessor.get_mut(value.prev[0]);
-                let new_val = (1.0 - t.powf(2.0)) * grad;
-                prev.grad += new_val;
-            },
+            propagate_fn,
         )
     }
 }
