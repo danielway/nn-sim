@@ -3,7 +3,7 @@ use std::{
     collections::HashSet,
     fmt::Debug,
     hash::Hash,
-    ops::{Add, Deref, Mul},
+    ops::{Add, Deref, Mul, Neg},
     rc::Rc,
 };
 
@@ -104,7 +104,7 @@ impl<'a, 'b> Add<&'b Value> for &'a Value {
 }
 
 fn add(a: &Value, b: &Value) -> Value {
-    let result = a.borrow_mut().data + b.borrow_mut().data;
+    let result = a.borrow().data + b.borrow().data;
 
     let prop_fn: PropagateFn = |value| {
         let mut first = value.previous[0].borrow_mut();
@@ -140,7 +140,7 @@ impl<'a, 'b> Mul<&'b Value> for &'a Value {
 }
 
 fn mul(a: &Value, b: &Value) -> Value {
-    let result = a.borrow_mut().data * b.borrow_mut().data;
+    let result = a.borrow().data * b.borrow().data;
 
     let prop_fn: PropagateFn = |value| {
         let mut first = value.previous[0].borrow_mut();
@@ -157,6 +157,22 @@ fn mul(a: &Value, b: &Value) -> Value {
         vec![a.clone(), b.clone()],
         Some(prop_fn),
     ))
+}
+
+impl Neg for Value {
+    type Output = Value;
+
+    fn neg(self) -> Self::Output {
+        mul(&self, &Value::from(-1))
+    }
+}
+
+impl<'a> Neg for &'a Value {
+    type Output = Value;
+
+    fn neg(self) -> Self::Output {
+        mul(self, &Value::from(-1))
+    }
 }
 
 type PropagateFn = fn(value: &Ref<ValueInternal>);
