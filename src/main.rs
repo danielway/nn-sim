@@ -1,4 +1,6 @@
-use crate::value::Value;
+use std::borrow::Borrow;
+
+use crate::{mlp::MLP, value::Value};
 
 mod layer;
 mod mlp;
@@ -38,16 +40,47 @@ fn main() {
     o.backward();
     println!("{:?}", o);
 
-    // let mlp = MLP::new(&mut vt, 3, vec![4, 4, 1]);
+    let mlp = MLP::new(3, vec![4, 4, 1]);
 
-    // let xs = vec![
-    //     vec![2.0, 3.0, -1.0],
-    //     vec![3.0, -1.0, 0.5],
-    //     vec![0.5, 1.0, 1.0],
-    //     vec![1.0, 1.0, -1.0],
-    // ];
+    let xs = vec![
+        vec![2.0, 3.0, -1.0],
+        vec![3.0, -1.0, 0.5],
+        vec![0.5, 1.0, 1.0],
+        vec![1.0, 1.0, -1.0],
+    ];
 
-    // let ys = vec![1.0, -1.0, -1.0, 1.0];
+    let ys = vec![1.0, -1.0, -1.0, 1.0];
+
+    for _ in 0..100 {
+        let ypred: Vec<Value> = xs
+            .iter()
+            .map(|x| {
+                let xvals: Vec<Value> = x.iter().map(|x| Value::from(*x)).collect();
+                let pred = mlp.forward(xvals);
+                pred[0].clone()
+            })
+            .collect();
+
+        let ypred_floats: Vec<f64> = ypred.iter().map(|v| v.data()).collect();
+
+        let ygt = ys.iter().map(|y| Value::from(*y));
+        let loss: Value = ypred
+            .into_iter()
+            .zip(ygt)
+            .map(|(yp, yg)| (yp - yg).pow(&Value::from(2.0)))
+            .sum();
+
+        println!(
+            "Loss: {} Predictions: {:?}",
+            loss.borrow().data(),
+            ypred_floats
+        );
+
+        mlp.parameters().iter().for_each(|p| p.clear_gradient());
+        loss.backward();
+
+        mlp.parameters().iter().for_each(|p| p.adjust(-0.05));
+    }
 
     let map = generate();
     let entity = Entity { pos: (0, 0) };

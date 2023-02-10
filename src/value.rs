@@ -3,8 +3,9 @@ use std::{
     collections::HashSet,
     fmt::Debug,
     hash::Hash,
-    ops::{Add, Deref, Mul, Neg, Sub, AddAssign},
-    rc::Rc, iter::Sum,
+    iter::Sum,
+    ops::{Add, Deref, Mul, Neg, Sub},
+    rc::Rc,
 };
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -27,6 +28,23 @@ impl Value {
         self
     }
 
+    pub fn data(&self) -> f64 {
+        self.borrow().data
+    }
+
+    pub fn gradient(&self) -> f64 {
+        self.borrow().gradient
+    }
+
+    pub fn clear_gradient(&self) {
+        self.borrow_mut().gradient = 0.0;
+    }
+
+    pub fn adjust(&self, factor: f64) {
+        let mut value = self.borrow_mut();
+        value.data += factor * value.gradient;
+    }
+
     pub fn pow(&self, other: &Value) -> Value {
         let result = self.borrow().data.powf(other.borrow().data);
 
@@ -40,7 +58,7 @@ impl Value {
             result,
             None,
             Some("^".to_string()),
-            vec![self.clone()],
+            vec![self.clone(), other.clone()],
             Some(prop_fn),
         ))
     }
