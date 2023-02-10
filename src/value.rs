@@ -27,6 +27,24 @@ impl Value {
         self
     }
 
+    pub fn pow(&self, other: &Value) -> Value {
+        let result = self.borrow().data.powf(other.borrow().data);
+
+        let prop_fn: PropagateFn = |value| {
+            let mut base = value.previous[0].borrow_mut();
+            let power = value.previous[1].borrow();
+            base.gradient += power.data * (base.data.powf(power.data - 1.0)) * value.gradient;
+        };
+
+        Value::new(ValueInternal::new(
+            result,
+            None,
+            Some("^".to_string()),
+            vec![self.clone()],
+            Some(prop_fn),
+        ))
+    }
+
     pub fn tanh(&self) -> Value {
         let result = self.borrow().data.tanh();
 
