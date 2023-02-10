@@ -1,7 +1,9 @@
 use std::{io::stdout, thread::sleep, time::Duration};
 
+use mlp::MLP;
 use rand::{rngs::ThreadRng, thread_rng, Rng};
 use tty_interface::{pos, Interface, Position, Result};
+use value::Value;
 
 mod layer;
 mod mlp;
@@ -37,25 +39,37 @@ trait ControlledEntity {
     fn get_move(&mut self, pos: (usize, usize), map: &Map) -> Option<Move>;
 }
 
-struct AIEntity {
-    rng: ThreadRng,
-}
+struct AIEntity(MLP);
 
 impl AIEntity {
     fn new() -> AIEntity {
-        AIEntity {
-            rng: thread_rng(),
-        }
+        AIEntity(MLP::new(4, vec![8, 8, 4]))
     }
 }
 
 impl ControlledEntity for AIEntity {
     fn get_move(&mut self, _pos: (usize, usize), _map: &Map) -> Option<Move> {
-        Some(match self.rng.gen_range(0..=4) {
-            0..=1 => Move::Up,
-            1..=2 => Move::Down,
-            2..=3 => Move::Left,
-            _ => Move::Right
+        // TODO: derive inputs from the map
+        let input = vec![0.0, 0.0, 0.0, 0.0];
+        
+        let output = self.0.forward(input.iter().map(|f| Value::from(*f)).collect());
+
+        let mut greatest_index = 0;
+        let mut greatest_value = 0.0;
+        
+        for i in 0..output.len() {
+            if output[i].data() > greatest_value {
+                greatest_index = i;
+                greatest_value = output[i].data();
+            }
+        }
+        
+        Some(match greatest_index {
+            0 => Move::Up,
+            1 => Move::Down,
+            2 => Move::Left,
+            3 => Move::Right,
+            _ => panic!(),
         })
     }
 }
