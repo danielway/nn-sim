@@ -3,7 +3,7 @@ use std::{
     collections::HashSet,
     fmt::Debug,
     hash::Hash,
-    ops::{Add, Deref, Mul, Neg},
+    ops::{Add, Deref, Mul, Neg, Sub},
     rc::Rc,
 };
 
@@ -121,6 +121,22 @@ fn add(a: &Value, b: &Value) -> Value {
         vec![a.clone(), b.clone()],
         Some(prop_fn),
     ))
+}
+
+impl Sub<Value> for Value {
+    type Output = Value;
+
+    fn sub(self, other: Value) -> Self::Output {
+        add(&self, &(-other))
+    }
+}
+
+impl<'a, 'b> Sub<&'b Value> for &'a Value {
+    type Output = Value;
+
+    fn sub(self, other: &'b Value) -> Self::Output {
+        add(self, &(-other))
+    }
 }
 
 impl Mul<Value> for Value {
