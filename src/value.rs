@@ -3,8 +3,8 @@ use std::{
     collections::HashSet,
     fmt::Debug,
     hash::Hash,
-    ops::{Add, Deref, Mul, Neg, Sub},
-    rc::Rc,
+    ops::{Add, Deref, Mul, Neg, Sub, AddAssign},
+    rc::Rc, iter::Sum,
 };
 
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -206,6 +206,21 @@ impl<'a> Neg for &'a Value {
 
     fn neg(self) -> Self::Output {
         mul(self, &Value::from(-1))
+    }
+}
+
+impl Sum for Value {
+    fn sum<I: Iterator<Item = Self>>(mut iter: I) -> Self {
+        let mut sum = Value::from(0.0);
+        loop {
+            let val = iter.next();
+            if val.is_none() {
+                break;
+            }
+
+            sum = sum + val.unwrap();
+        }
+        sum
     }
 }
 
