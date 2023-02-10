@@ -1,6 +1,9 @@
-mod nn;
+use crate::value::Value;
 
-use crate::nn::{Neuron, ValueAccessor, ValueTree, MLP};
+mod layer;
+mod mlp;
+mod neuron;
+mod value;
 
 #[derive(Copy, Clone)]
 enum Cell {
@@ -16,42 +19,35 @@ struct Entity {
 const SIZE: usize = 10;
 
 fn main() {
-    let mut vt = ValueTree::new();
+    let x1 = Value::from(2.0).with_label("x1");
+    let x2 = Value::from(0.0).with_label("x2");
 
-    let x1 = vt.create_value(2.0, "x1", None).id();
-    let x2 = vt.create_value(0.0, "x2", None).id();
+    let w1 = Value::from(-3.0).with_label("w1");
+    let w2 = Value::from(1.0).with_label("w2");
 
-    let w1 = vt.create_value(-3.0, "w1", None).id();
-    let w2 = vt.create_value(1.0, "w2", None).id();
+    let b = Value::from(6.8813735870195432).with_label("b");
 
-    let b = vt.create_value(6.8813735870195432, "b", None).id();
+    let x1w1 = (x1 * w1).with_label("x1w1");
+    let x2w2 = (x2 * w2).with_label("x2w2");
 
-    let x1w1 = vt.mul_values(x1, w1, "x1w2").id();
-    let x2w2 = vt.mul_values(x2, w2, "x2w2").id();
+    let x1w1x2w2 = (x1w1 + x2w2).with_label("x1w1x2w2");
 
-    let x1w1x2w2 = vt.add_values(x1w1, x2w2, "x1w1x2w2").id();
+    let n = (x1w1x2w2 + b).with_label("n");
+    let o = n.tanh().with_label("o");
 
-    let n = vt.add_values(x1w1x2w2, b, "n").id();
-    let o = vt.tanh_value(n, "o").id();
+    o.backward();
+    println!("{:?}", o);
 
-    vt.backward(o);
-    println!("{:?}", vt.get(x1));
+    // let mlp = MLP::new(&mut vt, 3, vec![4, 4, 1]);
 
-    let mlp = MLP::new(vt, 3, vec![4, 4, 1]);
+    // let xs = vec![
+    //     vec![2.0, 3.0, -1.0],
+    //     vec![3.0, -1.0, 0.5],
+    //     vec![0.5, 1.0, 1.0],
+    //     vec![1.0, 1.0, -1.0],
+    // ];
 
-    let xs = vec![
-        vec![2.0, 3.0, -1.0],
-        vec![3.0, -1.0, 0.5],
-        vec![0.5, 1.0, 1.0],
-        vec![1.0, 1.0, -1.0],
-    ];
-
-    let ys = vec![1.0, -1.0, -1.0, 1.0];
-
-    for _ in 0..1000 {
-        // TODO: map f64 to values, complete training loop
-        let ypred: Vec<Vec<ValueId>> = xs.iter().map(|x| mlp.forward(&mut vt, x)).collect();
-    }
+    // let ys = vec![1.0, -1.0, -1.0, 1.0];
 
     let map = generate();
     let entity = Entity { pos: (0, 0) };
