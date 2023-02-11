@@ -94,6 +94,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "micrograd-rs"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "378c06014d9b6b6c72e192d5e9125d0761ffb77955f03a8b0c05f15dae46cf70"
+dependencies = [
+ "rand",
+]
+
+[[package]]
 name = "mio"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -109,6 +118,7 @@ dependencies = [
 name = "nn-sim"
 version = "0.1.0"
 dependencies = [
+ "micrograd-rs",
  "rand",
  "tty-interface",
 ]
