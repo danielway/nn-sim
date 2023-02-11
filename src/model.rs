@@ -2,6 +2,7 @@ use micrograd_rs::{Value, MLP};
 
 use crate::mutation::MutationStrategy;
 
+#[derive(Clone)]
 pub struct Model(MLP);
 
 impl Model {
@@ -9,13 +10,8 @@ impl Model {
         Model(MLP::new(4, vec![8, 8, 4]))
     }
 
-    pub fn from(mlp: &MLP) -> Model {
-        let test = mlp.clone();
-        Model(test)
-    }
-
-    pub fn mutate(mlp: &MLP, strategy: &dyn MutationStrategy) -> Model {
-        let mut new_mlp = mlp.clone();
+    pub fn mutate(&mut self, strategy: &mut dyn MutationStrategy) -> Model {
+        let mut new_mlp = self.0.clone();
         strategy.mutate(&mut new_mlp);
         Model(new_mlp)
     }

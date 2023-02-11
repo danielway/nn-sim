@@ -22,15 +22,15 @@ pub trait ControlledEntity {
     fn get_move(&mut self, map: &Map) -> Option<Move>;
 }
 
-pub struct AIEntity(Model);
+pub struct AIEntity<'a>(&'a Model);
 
-impl AIEntity {
-    pub fn new(model: Model) -> AIEntity {
+impl AIEntity<'_> {
+    pub fn new(model: &Model) -> AIEntity {
         AIEntity(model)
     }
 }
 
-impl ControlledEntity for AIEntity {
+impl ControlledEntity for AIEntity<'_> {
     fn get_move(&mut self, _map: &Map) -> Option<Move> {
         // TODO: derive inputs from the map
         let input = vec![0.0, 0.0, 0.0, 0.0];
