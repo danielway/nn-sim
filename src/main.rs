@@ -1,14 +1,7 @@
 use std::{io::stdout, thread::sleep, time::Duration};
 
-use mlp::MLP;
-use rand::{rngs::ThreadRng, thread_rng, Rng};
+use micrograd_rs::{Value, MLP};
 use tty_interface::{pos, Interface, Position, Result};
-use value::Value;
-
-mod layer;
-mod mlp;
-mod neuron;
-mod value;
 
 #[derive(Copy, Clone)]
 enum Cell {
@@ -32,7 +25,10 @@ impl Entity {
 
 #[derive(Debug, Copy, Clone)]
 enum Move {
-    Up, Down, Left, Right
+    Up,
+    Down,
+    Left,
+    Right,
 }
 
 trait ControlledEntity {
@@ -51,19 +47,21 @@ impl ControlledEntity for AIEntity {
     fn get_move(&mut self, _pos: (usize, usize), _map: &Map) -> Option<Move> {
         // TODO: derive inputs from the map
         let input = vec![0.0, 0.0, 0.0, 0.0];
-        
-        let output = self.0.forward(input.iter().map(|f| Value::from(*f)).collect());
+
+        let output = self
+            .0
+            .forward(input.iter().map(|f| Value::from(*f)).collect());
 
         let mut greatest_index = 0;
         let mut greatest_value = 0.0;
-        
+
         for i in 0..output.len() {
             if output[i].data() > greatest_value {
                 greatest_index = i;
                 greatest_value = output[i].data();
             }
         }
-        
+
         Some(match greatest_index {
             0 => Move::Up,
             1 => Move::Down,
@@ -82,7 +80,7 @@ fn main() {
 
 fn execute() -> Result<()> {
     let map = generate_map();
-    
+
     let mut entity = Entity::new((1, 1));
     let mut ai = AIEntity::new();
 
@@ -119,7 +117,7 @@ fn execute() -> Result<()> {
 
         interface.clear_line(0);
         interface.set(pos!(0, 0), &format!("{:?}", entity_move));
-        
+
         render(&mut interface, &map, &entity)?;
         sleep(Duration::from_millis(250));
     }
@@ -132,7 +130,7 @@ fn generate_map() -> [[Cell; SIZE]; SIZE] {
 
     for x in 0..SIZE {
         for y in 0..SIZE {
-            if x == 0 || y == 0 || x == SIZE-1 || y == SIZE-1 {
+            if x == 0 || y == 0 || x == SIZE - 1 || y == SIZE - 1 {
                 map[y][x] = Cell::Wall;
             }
         }
