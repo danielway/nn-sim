@@ -11,7 +11,11 @@ enum Cell {
 }
 
 const SIZE: usize = 10;
-type Map = [[Cell; SIZE]; SIZE];
+struct Map {
+    cells: [[Cell; SIZE]; SIZE],
+    entity: Entity,
+    goal: (usize, usize),
+}
 
 struct Entity {
     position: (usize, usize),
@@ -32,7 +36,7 @@ enum Move {
 }
 
 trait ControlledEntity {
-    fn get_move(&mut self, pos: (usize, usize), map: &Map) -> Option<Move>;
+    fn get_move(&mut self, map: &Map) -> Option<Move>;
 }
 
 struct AIEntity(MLP);
@@ -44,7 +48,7 @@ impl AIEntity {
 }
 
 impl ControlledEntity for AIEntity {
-    fn get_move(&mut self, _pos: (usize, usize), _map: &Map) -> Option<Move> {
+    fn get_move(&mut self, _map: &Map) -> Option<Move> {
         // TODO: derive inputs from the map
         let input = vec![0.0, 0.0, 0.0, 0.0];
 
@@ -88,7 +92,7 @@ fn execute() -> Result<()> {
     let mut interface = Interface::new_relative(&mut stdout)?;
 
     for _ in 0..ITER_LIMIT {
-        let entity_move = ai.get_move(entity.position, &map);
+        let entity_move = ai.get_move(&map);
 
         if let Some(entity_move) = entity_move {
             match entity_move {
@@ -118,45 +122,47 @@ fn execute() -> Result<()> {
         interface.clear_line(0);
         interface.set(pos!(0, 0), &format!("{:?}", entity_move));
 
-        render(&mut interface, &map, &entity)?;
+        render(&mut interface, &map)?;
         sleep(Duration::from_millis(250));
     }
 
     Ok(())
 }
 
-fn generate_map() -> [[Cell; SIZE]; SIZE] {
-    let mut map = [[Cell::Empty; SIZE]; SIZE];
+fn generate_map() -> Map {
+    let mut cells = [[Cell::Empty; SIZE]; SIZE];
 
     for x in 0..SIZE {
         for y in 0..SIZE {
             if x == 0 || y == 0 || x == SIZE - 1 || y == SIZE - 1 {
-                map[y][x] = Cell::Wall;
+                cells[y][x] = Cell::Wall;
             }
         }
     }
 
-    map[8][7] = Cell::Goal;
+    cells[8][7] = Cell::Goal;
 
-    map
+    Map { cells, entity: Entity::new((1, 1)), goal: (7, 8) }
 }
 
-fn render(interface: &mut Interface, map: &[[Cell; SIZE]; SIZE], entity: &Entity) -> Result<()> {
-    for (y, row) in map.iter().enumerate() {
+fn render(interface: &mut Interface, map: &Map) -> Result<()> {
+    for (y, row) in map.cells.iter().enumerate() {
         for (x, cell) in row.iter().enumerate() {
-            if x == entity.position.0 && y == entity.position.1 {
-                interface.set(pos!(x as u16, 1 + y as u16), "E");
-                continue;
-            }
-
             interface.set(
                 pos!(x as u16, 1 + y as u16),
                 match cell {
-                    Cell::Empty => " ",
                     Cell::Wall => "#",
-                    Cell::Goal => "G",
+                    _ => " ",
                 },
             );
+
+            if x == map.entity.position.0 && y == map.entity.position.1 {
+                interface.set(pos!(x as u16, 1 + y as u16), "E");
+            }
+
+            if x == map.goal.0 && y == map.goal.1 {
+                interface.set(pos!(x as u16, 1 + y as u16), "G");
+            }
         }
     }
 
