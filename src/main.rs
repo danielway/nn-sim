@@ -27,43 +27,50 @@ fn execute() -> Result<()> {
 
     for _ in 0..ITER_LIMIT {
         let entity_move = ai.get_move(&map);
+        process_entity_move(&mut map.entity, entity_move);
 
-        if let Some(entity_move) = entity_move {
-            match entity_move {
-                Move::Up => {
-                    if map.entity.position.1 > 1 {
-                        map.entity.position.1 -= 1;
-                    }
-                }
-                Move::Down => {
-                    if map.entity.position.1 < 8 {
-                        map.entity.position.1 += 1;
-                    }
-                }
-                Move::Left => {
-                    if map.entity.position.0 > 1 {
-                        map.entity.position.0 -= 1;
-                    }
-                }
-                Move::Right => {
-                    if map.entity.position.0 < 8 {
-                        map.entity.position.0 += 1;
-                    }
-                }
-            }
-        }
+        render(&mut interface, &map, entity_move)?;
 
-        interface.clear_line(0);
-        interface.set(pos!(0, 0), &format!("{:?}", entity_move));
-
-        render(&mut interface, &map)?;
         sleep(Duration::from_millis(250));
     }
 
     Ok(())
 }
 
-fn render(interface: &mut Interface, map: &Map) -> Result<()> {
+fn process_entity_move(entity: &mut Entity, mv: Option<Move>) {
+    if let Some(entity_move) = mv {
+        match entity_move {
+            Move::Up => {
+                if entity.position.1 > 1 {
+                    entity.position.1 -= 1;
+                }
+            }
+            Move::Down => {
+                if entity.position.1 < 8 {
+                    entity.position.1 += 1;
+                }
+            }
+            Move::Left => {
+                if entity.position.0 > 1 {
+                    entity.position.0 -= 1;
+                }
+            }
+            Move::Right => {
+                if entity.position.0 < 8 {
+                    entity.position.0 += 1;
+                }
+            }
+        }
+    }
+}
+
+fn render(interface: &mut Interface, map: &Map, mv: Option<Move>) -> Result<()> {
+    interface.clear_rest_of_interface(pos!(0, 0));
+
+    if let Some(mv) = mv {
+        interface.set(pos!(0, 0), &format!("{:?}", mv));
+    }
+
     for (y, row) in map.cells.iter().enumerate() {
         for (x, cell) in row.iter().enumerate() {
             interface.set(
